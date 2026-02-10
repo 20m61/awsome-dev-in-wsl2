@@ -152,6 +152,17 @@ Custom configs can extend or override:
 | apt/snap | tmux, mosh, btop, gh | System package manager |
 | get.docker.com | Docker | Official installer |
 
+## Dotfiles Snippets (`scripts/dotfiles/`)
+
+Reusable shell configuration snippets that are sourced from `~/.bashrc` or referenced by `~/.gitconfig`:
+
+| File | Purpose |
+|------|---------|
+| `bashrc-worktree.sh` | `wt` command: git worktree + tmux + Claude Code integration |
+| `gitconfig-worktree.ini` | Git worktree alias reference (`wta`, `wtl`, `wtr`, `wtp`) |
+
+These files are managed within this repository and sourced at shell startup, keeping `~/.bashrc` clean while enabling version-controlled shell extensions.
+
 ## File Locations
 
 | What | Where |

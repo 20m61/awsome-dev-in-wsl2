@@ -112,6 +112,40 @@ make doctor                           # Diagnostics
 
 ---
 
+## Git Worktree + tmux (`wt`)
+
+| Command | Description |
+|---------|-------------|
+| `wt add <branch>` | Create worktree + tmux session |
+| `wt add <branch> --base <ref>` | Create from specific ref |
+| `wt ls` | List worktrees with tmux status |
+| `wt switch` | fzf picker to switch session |
+| `wt rm <branch>` | Remove worktree + kill session |
+| `wt review <pr#>` | Checkout PR as worktree |
+| `wt cd [branch]` | cd into worktree (fzf if no arg) |
+| `wt help` | Show help |
+
+### Git Aliases
+
+| Alias | Command |
+|-------|---------|
+| `git wta` | `git worktree add` |
+| `git wtl` | `git worktree list` |
+| `git wtr` | `git worktree remove` |
+| `git wtp` | `git worktree prune` |
+
+### tmux Session Layout
+
+| Window | Purpose |
+|--------|---------|
+| editor | Neovim |
+| claude | Claude Code CLI |
+| shell | General terminal |
+| server | (Node.js projects only) |
+| docker | (Docker projects only) |
+
+---
+
 ## tmux Keybindings
 
 **Prefix:** `Ctrl+a` (or `Ctrl+b`)
