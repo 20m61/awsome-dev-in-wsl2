@@ -22,11 +22,23 @@ install_nvm() {
         log_warning "Failed to detect nvm version, falling back to v0.40.3"
         nvm_version="v0.40.3"
     fi
-    curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/${nvm_version}/install.sh" | bash
+    local tmp_script
+    tmp_script=$(mktemp)
+    if ! curl -fsSL "https://raw.githubusercontent.com/nvm-sh/nvm/${nvm_version}/install.sh" -o "$tmp_script"; then
+        log_error "Failed to download nvm install script"
+        rm -f "$tmp_script"
+        return 1
+    fi
+    bash "$tmp_script"
+    rm -f "$tmp_script"
 
     export NVM_DIR="$HOME/.nvm"
     # shellcheck disable=SC1091
-    [[ -s "$NVM_DIR/nvm.sh" ]] && \. "$NVM_DIR/nvm.sh"
+    if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
+        log_error "nvm.sh not found. NVM installation may have failed."
+        return 1
+    fi
+    \. "$NVM_DIR/nvm.sh"
 
     log_info "nvm installed"
 }
@@ -41,11 +53,18 @@ install_nodejs() {
 
     export NVM_DIR="$HOME/.nvm"
     # shellcheck disable=SC1091
-    [[ -s "$NVM_DIR/nvm.sh" ]] && \. "$NVM_DIR/nvm.sh"
+    if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
+        log_error "nvm.sh not found. Install nvm first."
+        return 1
+    fi
+    \. "$NVM_DIR/nvm.sh"
 
-    nvm install --lts
-    nvm use --lts
-    nvm alias default 'lts/*'
+    if ! nvm install --lts; then
+        log_error "Failed to install Node.js LTS"
+        return 1
+    fi
+    nvm use --lts || { log_error "Failed to activate Node.js LTS"; return 1; }
+    nvm alias default 'lts/*' || log_warning "Failed to set default alias"
 
     log_info "Node.js $(node --version) installed"
 }
@@ -64,25 +83,37 @@ install_global_packages() {
 
     export NVM_DIR="$HOME/.nvm"
     # shellcheck disable=SC1091
-    [[ -s "$NVM_DIR/nvm.sh" ]] && \. "$NVM_DIR/nvm.sh"
+    if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
+        log_error "nvm.sh not found. Install nvm first."
+        return 1
+    fi
+    \. "$NVM_DIR/nvm.sh"
 
+    local failures=0
     for pkg in "${packages[@]}"; do
-        if npm list -g "$pkg" &>/dev/null; then
+        if npm list -g --depth=0 "$pkg" &>/dev/null; then
             log_info "$pkg is already installed"
         else
             log_info "Installing $pkg..."
-            npm install -g "$pkg"
+            if ! npm install -g "$pkg"; then
+                log_error "Failed to install $pkg"
+                ((failures++))
+            fi
         fi
     done
 
+    if [[ "$failures" -gt 0 ]]; then
+        log_warning "npm packages: $failures package(s) failed to install"
+        return 1
+    fi
     log_info "Global npm packages installed"
 }
 
 setup_nodejs() {
     log_step "Setting up Node.js environment..."
-    install_nvm
-    install_nodejs
-    install_global_packages
+    install_nvm || return 1
+    install_nodejs || return 1
+    install_global_packages || return 1
     log_info "Node.js environment setup complete"
 }
 

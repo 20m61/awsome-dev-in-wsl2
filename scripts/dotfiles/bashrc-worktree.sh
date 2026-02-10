@@ -1,6 +1,9 @@
 # Git Worktree + tmux + Claude Code CLI integration
 # Source this file from ~/.bashrc
 #
+# NOTE: set -euo pipefail is intentionally omitted because this file
+# is sourced into the interactive shell, not executed as a standalone script.
+#
 # Usage: wt <subcommand> [args]
 # Subcommands: add, ls, switch, rm, review, cd, help
 
@@ -77,6 +80,12 @@ _wt_add() {
     return 1
   fi
 
+  # Validate branch name
+  if ! git check-ref-format --allow-onelevel "refs/heads/${branch}" 2>/dev/null; then
+    echo "wt: invalid branch name '${branch}'" >&2
+    return 1
+  fi
+
   local root
   root="$(_wt_main_root)"
   if [[ -z "$root" ]]; then
@@ -89,15 +98,20 @@ _wt_add() {
   if [[ -d "$wt_dir" ]]; then
     echo "wt: worktree already exists at ${wt_dir}"
   else
+    local wt_rc=0
     if [[ -n "$base" ]]; then
-      git worktree add -b "$branch" "$wt_dir" "$base"
+      git worktree add -b "$branch" "$wt_dir" "$base" || wt_rc=$?
     else
       # If branch already exists, just check it out; otherwise create it
       if git show-ref --verify --quiet "refs/heads/${branch}" 2>/dev/null; then
-        git worktree add "$wt_dir" "$branch"
+        git worktree add "$wt_dir" "$branch" || wt_rc=$?
       else
-        git worktree add -b "$branch" "$wt_dir"
+        git worktree add -b "$branch" "$wt_dir" || wt_rc=$?
       fi
+    fi
+    if [[ $wt_rc -ne 0 ]]; then
+      echo "wt: failed to create worktree" >&2
+      return 1
     fi
   fi
 
@@ -127,9 +141,10 @@ _wt_ls() {
   echo ""
 
   git worktree list | while IFS= read -r line; do
-    local wt_path wt_branch
-    wt_path="$(echo "$line" | awk '{print $1}')"
-    wt_branch="$(echo "$line" | grep -oP '\[.*?\]' | tr -d '[]')"
+    local wt_path wt_branch bracket_part
+    wt_path="${line%% *}"
+    bracket_part="${line##*\[}"
+    wt_branch="${bracket_part%%\]*}"
 
     # Check tmux session status
     local session_name="${repo_name}/${wt_branch//\//-}"
@@ -158,7 +173,7 @@ _wt_switch() {
       fzf --header="Switch worktree (${repo_name})" \
           --preview "
             dir=\$(echo {} | awk '{print \$1}')
-            branch=\$(echo {} | grep -oP '\[.*?\]' | tr -d '[]')
+            branch=\$(echo {} | sed -n 's/.*\[\(.*\)\].*/\1/p')
             echo \"Branch: \$branch\"
             echo \"Path: \$dir\"
             echo ''
@@ -188,9 +203,10 @@ _wt_switch() {
     return 0
   fi
 
-  local wt_path wt_branch
-  wt_path="$(echo "$selected" | awk '{print $1}')"
-  wt_branch="$(echo "$selected" | grep -oP '\[.*?\]' | tr -d '[]')"
+  local wt_path wt_branch bracket_part
+  wt_path="${selected%% *}"
+  bracket_part="${selected##*\[}"
+  wt_branch="${bracket_part%%\]*}"
 
   local session_name="${repo_name}/${wt_branch//\//-}"
 
@@ -253,7 +269,16 @@ _wt_rm() {
   if git show-ref --verify --quiet "refs/heads/${branch}" 2>/dev/null; then
     read -rp "Delete branch '${branch}'? [y/N] " answer
     if [[ "$answer" =~ ^[Yy]$ ]]; then
-      git branch -d "$branch" 2>/dev/null || git branch -D "$branch"
+      if ! git branch -d "$branch" 2>/dev/null; then
+        echo "wt: branch '${branch}' is not fully merged."
+        read -rp "Force delete? [y/N] " force_answer
+        if [[ "$force_answer" =~ ^[Yy]$ ]]; then
+          git branch -D "$branch"
+        else
+          echo "wt: branch kept"
+          return 0
+        fi
+      fi
       echo "wt: deleted branch '${branch}'"
     fi
   fi
@@ -264,6 +289,11 @@ _wt_review() {
   local pr_number="$1"
   if [[ -z "$pr_number" ]]; then
     echo "Usage: wt review <pr#>"
+    return 1
+  fi
+
+  if [[ ! "$pr_number" =~ ^[0-9]+$ ]]; then
+    echo "wt: PR number must be a positive integer" >&2
     return 1
   fi
 
@@ -282,7 +312,10 @@ _wt_review() {
   echo "wt: PR #${pr_number} -> branch '${branch}'"
 
   # Fetch the branch
-  git fetch origin "$branch" 2>/dev/null
+  if ! git fetch origin "$branch" 2>&1; then
+    echo "wt: failed to fetch branch '${branch}' from origin" >&2
+    return 1
+  fi
 
   local root
   root="$(_wt_main_root)"
@@ -292,8 +325,11 @@ _wt_review() {
   if [[ -d "$wt_dir" ]]; then
     echo "wt: worktree already exists, switching..."
   else
-    git worktree add "$wt_dir" "origin/${branch}" 2>/dev/null || \
-      git worktree add "$wt_dir" "$branch"
+    if ! git worktree add "$wt_dir" "origin/${branch}" 2>/dev/null && \
+       ! git worktree add "$wt_dir" "$branch" 2>/dev/null; then
+      echo "wt: failed to create worktree for branch '${branch}'" >&2
+      return 1
+    fi
   fi
 
   local session_name
@@ -449,7 +485,7 @@ _wt_completions() {
     rm|cd)
       # Complete existing worktree branches
       local wt_branches
-      wt_branches=$(git worktree list 2>/dev/null | grep -oP '\[.*?\]' | tr -d '[]')
+      wt_branches=$(git worktree list 2>/dev/null | sed -n 's/.*\[\(.*\)\].*/\1/p')
       COMPREPLY=($(compgen -W "$wt_branches" -- "$cur"))
       ;;
     review)

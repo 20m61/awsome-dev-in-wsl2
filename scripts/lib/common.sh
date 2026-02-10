@@ -14,9 +14,10 @@ readonly NC='\033[0m'
 
 # Directories
 readonly INSTALL_BIN="$HOME/.local/bin"
-readonly BACKUP_DIR="$HOME/.config-backup/$(date +%Y%m%d-%H%M%S)"
+readonly _SETUP_TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+readonly BACKUP_DIR="$HOME/.config-backup/$_SETUP_TIMESTAMP"
 readonly LOG_DIR="$HOME/.setup-logs"
-readonly LOG_FILE="$LOG_DIR/setup-$(date +%Y%m%d-%H%M%S).log"
+readonly LOG_FILE="$LOG_DIR/setup-$_SETUP_TIMESTAMP.log"
 
 # Step counter
 _CURRENT_STEP=0
@@ -102,6 +103,12 @@ install_github_release() {
     local repo="$1"
     local binary="$2"
     local pattern="$3"
+
+    # Validate repo format: owner/name
+    if [[ ! "$repo" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
+        log_error "Invalid repo format: $repo (expected owner/repo)"
+        return 1
+    fi
     local strip="${4:-}"
     local extract_name="${5:-$binary}"
 
@@ -130,10 +137,11 @@ install_github_release() {
 
     local tmp_dir
     tmp_dir=$(mktemp -d)
-    trap "rm -rf '$tmp_dir'" RETURN
+    # shellcheck disable=SC2064
+    trap "rm -rf -- '${tmp_dir}'" RETURN
 
     log_info "Downloading $url"
-    if ! curl -sL "$url" -o "$tmp_dir/archive"; then
+    if ! curl -sfL "$url" -o "$tmp_dir/archive"; then
         log_error "Failed to download $binary"
         return 1
     fi
@@ -218,7 +226,7 @@ check_system_requirements() {
 
     # Check disk space (minimum 2GB)
     local available_kb
-    available_kb=$(df "$HOME" | tail -1 | awk '{print $4}')
+    available_kb=$(df --output=avail "$HOME" | tail -1 | tr -d ' ')
     local available_gb=$((available_kb / 1024 / 1024))
     if [[ "$available_gb" -lt 2 ]]; then
         error_exit "Insufficient disk space. Available: ${available_gb}GB, Required: 2GB"
@@ -234,8 +242,11 @@ _github_latest_tag() {
     if command_exists gh; then
         tag=$(gh api "repos/$repo/releases/latest" --jq '.tag_name' 2>/dev/null) || true
     fi
+    if [[ -z "$tag" ]] && command_exists jq; then
+        tag=$(curl -sfL "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null | jq -r '.tag_name // empty' 2>/dev/null)
+    fi
     if [[ -z "$tag" ]]; then
-        tag=$(curl -sL "https://api.github.com/repos/$repo/releases/latest" | grep -oP '"tag_name": "\K[^"]+')
+        tag=$(curl -sfL "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null | grep -oP '"tag_name": "\K[^"]+')
     fi
     echo "$tag"
 }
