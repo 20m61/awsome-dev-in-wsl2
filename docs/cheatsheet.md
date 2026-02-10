@@ -527,10 +527,10 @@ hyperfine --export-markdown bench.md 'cmd1' 'cmd2'
 | Variable | Value | Effect |
 |----------|-------|--------|
 | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | `70` | Auto-compaction at 70% context (default: 95%) |
-| `CLAUDE_CODE_EFFORT_LEVEL` | `medium` | Reduce thinking tokens for routine tasks |
 | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | `1` | Enable multi-agent collaboration |
 
 Session tips:
+- `claude --effort medium` — Per-session effort level for routine tasks (reduces thinking tokens)
 - `/clear` — Reset context between unrelated tasks
 - `/compact` — Manual compaction when context feels bloated
 

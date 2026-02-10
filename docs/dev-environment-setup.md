@@ -562,8 +562,9 @@ Claude Code が環境を最大限活用できるようにする設定。
 | 変数 | 値 | 効果 |
 |------|-----|------|
 | `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | `70` | 自動コンパクションを70%で発動（デフォルト95%） |
-| `CLAUDE_CODE_EFFORT_LEVEL` | `medium` | 通常タスクでthinkingトークンを抑制 |
 | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | `1` | Agent Teams（マルチエージェント協働）を有効化 |
+
+> **Note**: Effort level は `claude --effort medium` でセッション単位で指定（グローバル設定は品質リスクのため非推奨）。
 
 ```json
 {
@@ -588,7 +589,6 @@ Claude Code が環境を最大限活用できるようにする設定。
     "EDITOR": "nvim",
     "LANG": "ja_JP.UTF-8",
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "70",
-    "CLAUDE_CODE_EFFORT_LEVEL": "medium",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "hooks": {
