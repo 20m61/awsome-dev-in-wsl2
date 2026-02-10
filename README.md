@@ -99,8 +99,11 @@ cd awsome-dev-in-wsl2
 ### Phase 7: Claude Code Configuration
 
 - **settings.json** - 権限設定 (allow/deny)、環境変数、PostToolUse フック
+- **Token efficiency** - 自動コンパクション (70%)、effort level 制御、CLAUDE.md 最適化
+- **Agent Teams** - マルチエージェント並行作業（並行レビュー、仮説デバッグ等）
 - **hooks** - Edit/Write 後の自動フォーマット (biome, ruff)
 - **skills** - カスタムスラッシュコマンド (`/review`, `/gen-test`, `/gen-docs`, `/wt`, `/wp`)
+- **memory** - プロジェクト別セッション横断メモリ
 
 ## Dotfiles Snippets
 
