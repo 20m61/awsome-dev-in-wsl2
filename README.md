@@ -96,6 +96,30 @@ cd awsome-dev-in-wsl2
 - ネイティブ MySQL 無効化 (Docker で代替)
 - WSL2 `.wslconfig` 設定リマインダ
 
+### Phase 7: Claude Code Configuration
+
+- **settings.json** - 権限設定 (allow/deny)、環境変数、PostToolUse フック
+- **hooks** - Edit/Write 後の自動フォーマット (biome, ruff)
+- **skills** - カスタムスラッシュコマンド (`/review`, `/gen-test`, `/gen-docs`, `/wt`, `/wp`)
+
+## Dotfiles Snippets
+
+Shell configuration snippets in `scripts/dotfiles/` that extend your environment:
+
+| Snippet | Description |
+|---------|-------------|
+| `bashrc-worktree.sh` | `wt` command - git worktree + tmux + Claude Code CLI integration |
+| `gitconfig-worktree.ini` | Git worktree aliases (`wta`, `wtl`, `wtr`, `wtp`) |
+
+```bash
+# Worktree workflow
+wt add feature/auth       # Create worktree + tmux session (editor/claude/shell)
+wt switch                 # fzf picker to switch worktree/session
+wt review 42              # Review PR #42 as worktree
+wt ls                     # List worktrees with tmux status
+wt rm feature/auth        # Cleanup worktree + session
+```
+
 ## Usage
 
 ```bash
@@ -143,6 +167,9 @@ awsome-dev-in-wsl2/
 │   ├── config/
 │   │   ├── default.conf         # Full install profile
 │   │   └── minimal.conf         # Minimal install profile
+│   ├── dotfiles/
+│   │   ├── bashrc-worktree.sh   # wt command (worktree + tmux)
+│   │   └── gitconfig-worktree.ini # Git worktree aliases
 │   └── tests/
 │       └── test-dry-run.sh      # Automated test suite
 ├── docs/

@@ -15,7 +15,7 @@ echo ""
 
 # Test 1: Script syntax validation
 echo "--- Syntax checks ---"
-for script in "$SCRIPT_DIR"/setup.sh "$SCRIPT_DIR"/lib/*.sh; do
+for script in "$SCRIPT_DIR"/setup.sh "$SCRIPT_DIR"/lib/*.sh "$SCRIPT_DIR"/dotfiles/*.sh; do
     if bash -n "$script" 2>&1; then
         pass "$(basename "$script") syntax OK"
     else
@@ -77,6 +77,17 @@ for module in "$SCRIPT_DIR"/lib/*.sh; do
         pass "$(basename "$module") sources cleanly"
     else
         fail "$(basename "$module") source error"
+    fi
+done
+
+# Test 8: Dotfiles can be sourced without running
+echo ""
+echo "--- Dotfiles sourcing ---"
+for dotfile in "$SCRIPT_DIR"/dotfiles/*.sh; do
+    if bash -c "source '$dotfile'" 2>/dev/null; then
+        pass "$(basename "$dotfile") sources cleanly"
+    else
+        fail "$(basename "$dotfile") source error"
     fi
 done
 

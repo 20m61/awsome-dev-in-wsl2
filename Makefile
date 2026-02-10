@@ -43,7 +43,7 @@ doctor:
 	@echo "Checking shell config..."
 	@bash -n ~/.bashrc 2>&1 && echo "  .bashrc syntax: OK" || echo "  .bashrc syntax: ERROR"
 	@echo "Checking scripts..."
-	@for f in scripts/setup.sh scripts/lib/*.sh; do \
+	@for f in scripts/setup.sh scripts/lib/*.sh scripts/dotfiles/*.sh; do \
 		bash -n "$$f" 2>&1 && printf "  %-35s OK\n" "$$f" || printf "  %-35s ERROR\n" "$$f"; \
 	done
 

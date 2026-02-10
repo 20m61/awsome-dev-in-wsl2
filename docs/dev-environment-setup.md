@@ -42,6 +42,7 @@ make help
 | 4 | Mosh + tmux | 必要 |
 | 5 | Additional Tools (direnv, jq, atuin, etc.) | 不要 |
 | 6 | Resource Optimization (WSL, services, swap) | 必要 |
+| 7 | Claude Code (settings, hooks, skills) | 不要 |
 
 ---
 
@@ -532,6 +533,138 @@ echo 'vm.swappiness=10' | sudo tee /etc/sysctl.d/99-swappiness.conf
 
 各 `docker-compose.yml` で `restart: "no"` に設定済み。
 必要時のみ `wp-up <project>` で起動。
+
+---
+
+## Phase 7: Claude Code Configuration
+
+Claude Code が環境を最大限活用できるようにする設定。
+
+### 7.1 グローバル CLAUDE.md
+
+`~/CLAUDE.md` に以下の情報を含める:
+
+- 利用可能な CLI ツール一覧（パス付き）
+- シェル関数・エイリアス一覧
+- プロジェクト構造（ghq 管理）
+- WSL2 固有の注意点
+- コーディングスタイル・ブランチ戦略
+
+### 7.2 settings.json (権限・環境変数・hooks)
+
+`~/.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
+      "Bash(git branch:*)", "Bash(git stash:*)", "Bash(git worktree list:*)",
+      "Bash(make:*)", "Bash(just:*)",
+      "Bash(npm run lint:*)", "Bash(npm run test:*)", "Bash(npm run build:*)",
+      "Bash(npx biome:*)", "Bash(ruff check:*)", "Bash(ruff format:*)",
+      "Bash(docker compose ps:*)", "Bash(docker compose logs:*)",
+      "Bash(gh pr:*)", "Bash(gh issue:*)", "Bash(gh api:*)",
+      "Bash(jq:*)", "Bash(yq:*)", "Bash(fd:*)", "Bash(bat:*)",
+      "Bash(eza:*)", "Bash(bash -n:*)"
+    ],
+    "deny": [
+      "Read(.env)", "Read(.env.*)", "Read(**/credentials.json)",
+      "Read(**/*.pem)", "Read(**/*.key)", "Read(**/id_rsa*)"
+    ]
+  },
+  "env": {
+    "EDITOR": "nvim",
+    "LANG": "ja_JP.UTF-8"
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/auto-format.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### 7.3 settings.local.json (マシン固有)
+
+`~/.claude/settings.local.json` にはマシン固有の許可設定のみ:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(source:*)", "Bash(cargo install:*)",
+      "Bash(. ~/.nvm/nvm.sh)", "Bash(node --version:*)",
+      "Bash(nvm install:*)", "Bash(nvm use:*)",
+      "Bash(npm:*)", "Bash(ghq:*)"
+    ]
+  }
+}
+```
+
+### 7.4 自動フォーマットフック
+
+`~/.claude/hooks/auto-format.sh`:
+
+```bash
+#!/bin/bash
+# Auto-format files after Edit/Write operations
+LOG="/tmp/claude-hook-format.log"
+
+input=$(cat)
+file=$(echo "$input" | jq -r '.tool_input.file_path // .tool_input.filePath // empty')
+
+[[ -z "$file" || ! -f "$file" ]] && exit 0
+
+case "$file" in
+  *.ts|*.tsx|*.js|*.jsx|*.json)
+    npx --no-install biome format --write "$file" 2>>"$LOG" ;;
+  *.py)
+    ~/.local/bin/ruff format "$file" 2>>"$LOG" ;;
+esac
+
+exit 0
+```
+
+```bash
+chmod +x ~/.claude/hooks/auto-format.sh
+```
+
+### 7.5 カスタムスラッシュコマンド (Skills)
+
+`~/.claude/skills/` 以下に SKILL.md を配置:
+
+| スキル | パス | 説明 |
+|--------|------|------|
+| `/review` | `skills/review/SKILL.md` | コードレビュー (セキュリティ・パフォーマンス・可読性) |
+| `/gen-test` | `skills/gen-test/SKILL.md` | テスト自動生成 (フレームワーク自動検出) |
+| `/gen-docs` | `skills/gen-docs/SKILL.md` | ドキュメント生成 (JSDoc/docstring/README) |
+| `/wt` | `skills/wt/SKILL.md` | git worktree 操作支援 |
+| `/wp` | `skills/wp/SKILL.md` | WordPress Docker プロジェクト管理 |
+
+### 7.6 ディレクトリ構成
+
+```
+~/.claude/
+├── settings.json          # グローバル権限・env・hooks
+├── settings.local.json    # マシン固有の権限
+├── hooks/
+│   └── auto-format.sh     # PostToolUse 自動フォーマット
+└── skills/
+    ├── review/SKILL.md
+    ├── gen-test/SKILL.md
+    ├── gen-docs/SKILL.md
+    ├── wt/SKILL.md
+    └── wp/SKILL.md
+```
 
 ---
 

@@ -16,9 +16,19 @@ install_direnv() {
         return 0
     fi
 
-    local version
-    version=$(curl -sL https://api.github.com/repos/direnv/direnv/releases/latest | grep -oP '"tag_name": "v\K[^"]+')
-    curl -sL "https://github.com/direnv/direnv/releases/download/v${version}/direnv.linux-amd64" -o "$INSTALL_BIN/direnv"
+    local tag
+    tag=$(_github_latest_tag "direnv/direnv")
+    if [[ -z "$tag" ]]; then
+        log_error "Failed to get latest direnv version"
+        return 1
+    fi
+    local version="${tag#v}"
+    mkdir -p "$INSTALL_BIN"
+    if ! curl -sfL "https://github.com/direnv/direnv/releases/download/v${version}/direnv.linux-amd64" -o "$INSTALL_BIN/direnv"; then
+        log_error "Failed to download direnv"
+        rm -f "$INSTALL_BIN/direnv"
+        return 1
+    fi
     chmod +x "$INSTALL_BIN/direnv"
     log_info "direnv installed"
 }
@@ -35,9 +45,19 @@ install_jq() {
         return 0
     fi
 
-    local version
-    version=$(curl -sL https://api.github.com/repos/jqlang/jq/releases/latest | grep -oP '"tag_name": "jq-\K[^"]+')
-    curl -sL "https://github.com/jqlang/jq/releases/download/jq-${version}/jq-linux-amd64" -o "$INSTALL_BIN/jq"
+    local tag
+    tag=$(_github_latest_tag "jqlang/jq")
+    if [[ -z "$tag" ]]; then
+        log_error "Failed to get latest jq version"
+        return 1
+    fi
+    local version="${tag#jq-}"
+    mkdir -p "$INSTALL_BIN"
+    if ! curl -sfL "https://github.com/jqlang/jq/releases/download/jq-${version}/jq-linux-amd64" -o "$INSTALL_BIN/jq"; then
+        log_error "Failed to download jq"
+        rm -f "$INSTALL_BIN/jq"
+        return 1
+    fi
     chmod +x "$INSTALL_BIN/jq"
     log_info "jq installed"
 }
@@ -54,9 +74,19 @@ install_yq() {
         return 0
     fi
 
-    local version
-    version=$(curl -sL https://api.github.com/repos/mikefarah/yq/releases/latest | grep -oP '"tag_name": "v\K[^"]+')
-    curl -sL "https://github.com/mikefarah/yq/releases/download/v${version}/yq_linux_amd64" -o "$INSTALL_BIN/yq"
+    local tag
+    tag=$(_github_latest_tag "mikefarah/yq")
+    if [[ -z "$tag" ]]; then
+        log_error "Failed to get latest yq version"
+        return 1
+    fi
+    local version="${tag#v}"
+    mkdir -p "$INSTALL_BIN"
+    if ! curl -sfL "https://github.com/mikefarah/yq/releases/download/v${version}/yq_linux_amd64" -o "$INSTALL_BIN/yq"; then
+        log_error "Failed to download yq"
+        rm -f "$INSTALL_BIN/yq"
+        return 1
+    fi
     chmod +x "$INSTALL_BIN/yq"
     log_info "yq installed"
 }
@@ -78,10 +108,23 @@ install_tldr() {
         return 0
     fi
 
-    curl -sL "https://github.com/dbrgn/tealdeer/releases/download/v1.7.2/tealdeer-linux-x86_64-musl" -o "$INSTALL_BIN/tldr"
+    local tag
+    tag=$(_github_latest_tag "dbrgn/tealdeer")
+    if [[ -z "$tag" ]]; then
+        log_error "Failed to get latest tealdeer version"
+        return 1
+    fi
+    local version="${tag#v}"
+
+    mkdir -p "$INSTALL_BIN"
+    if ! curl -sfL "https://github.com/dbrgn/tealdeer/releases/download/v${version}/tealdeer-linux-x86_64-musl" -o "$INSTALL_BIN/tldr"; then
+        log_error "Failed to download tldr"
+        rm -f "$INSTALL_BIN/tldr"
+        return 1
+    fi
     chmod +x "$INSTALL_BIN/tldr"
     "$INSTALL_BIN/tldr" --update 2>/dev/null || true
-    log_info "tldr installed"
+    log_info "tldr installed (v${version})"
 }
 
 install_uv() {
@@ -123,14 +166,19 @@ install_ghq() {
 
 setup_additional_tools() {
     log_step "Installing additional tools..."
-    install_direnv
-    install_jq
-    install_yq
-    install_just
-    install_tldr
-    install_uv
-    install_atuin
-    install_ghq
+    local failures=0
+    install_direnv  || ((failures++))
+    install_jq      || ((failures++))
+    install_yq      || ((failures++))
+    install_just    || ((failures++))
+    install_tldr    || ((failures++))
+    install_uv      || ((failures++))
+    install_atuin   || ((failures++))
+    install_ghq     || ((failures++))
+    if [[ "$failures" -gt 0 ]]; then
+        log_warning "Additional tools: $failures tool(s) failed to install"
+        return 1
+    fi
     log_info "Additional tools installation complete"
 }
 
