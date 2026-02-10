@@ -246,7 +246,7 @@ _github_latest_tag() {
         tag=$(curl -sfL "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null | jq -r '.tag_name // empty' 2>/dev/null)
     fi
     if [[ -z "$tag" ]]; then
-        tag=$(curl -sfL "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null | grep -oP '"tag_name": "\K[^"]+')
+        tag=$(curl -sfL "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p')
     fi
     echo "$tag"
 }
