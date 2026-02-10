@@ -17,7 +17,15 @@ install_docker() {
         return 0
     fi
 
-    curl -fsSL https://get.docker.com | sudo sh
+    local tmp_script
+    tmp_script=$(mktemp)
+    if ! curl -fsSL https://get.docker.com -o "$tmp_script"; then
+        log_error "Failed to download Docker install script"
+        rm -f "$tmp_script"
+        return 1
+    fi
+    sudo sh "$tmp_script"
+    rm -f "$tmp_script"
     sudo usermod -aG docker "$USER"
     log_info "Docker installed. Re-login required for group membership."
 }

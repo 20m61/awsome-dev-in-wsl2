@@ -177,6 +177,17 @@ install_github_release() {
                 return 1
             fi
             ;;
+        *.zip)
+            unzip -o "$tmp_dir/archive" -d "$tmp_dir/zip_extracted"
+            local found
+            found=$(find "$tmp_dir/zip_extracted" -name "$extract_name" -type f | head -1)
+            if [[ -n "$found" ]]; then
+                mv "$found" "$INSTALL_BIN/$binary"
+            else
+                log_error "Binary $extract_name not found in zip"
+                return 1
+            fi
+            ;;
         *)
             # Direct binary download
             mv "$tmp_dir/archive" "$INSTALL_BIN/$binary"

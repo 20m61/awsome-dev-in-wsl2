@@ -44,10 +44,11 @@ install_nvm() {
 }
 
 install_nodejs() {
-    log_info "Installing Node.js LTS..."
+    local node_version="${NODE_VERSION:-lts}"
+    log_info "Installing Node.js (${node_version})..."
 
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        echo -e "  ${YELLOW}[DRY RUN]${NC} nvm install --lts"
+        echo -e "  ${YELLOW}[DRY RUN]${NC} nvm install ${node_version}"
         return 0
     fi
 
@@ -59,12 +60,21 @@ install_nodejs() {
     fi
     \. "$NVM_DIR/nvm.sh"
 
-    if ! nvm install --lts; then
-        log_error "Failed to install Node.js LTS"
-        return 1
+    if [[ "$node_version" == "lts" ]]; then
+        if ! nvm install --lts; then
+            log_error "Failed to install Node.js LTS"
+            return 1
+        fi
+        nvm use --lts || { log_error "Failed to activate Node.js LTS"; return 1; }
+        nvm alias default 'lts/*' || log_warning "Failed to set default alias"
+    else
+        if ! nvm install "$node_version"; then
+            log_error "Failed to install Node.js ${node_version}"
+            return 1
+        fi
+        nvm use "$node_version" || { log_error "Failed to activate Node.js ${node_version}"; return 1; }
+        nvm alias default "$node_version" || log_warning "Failed to set default alias"
     fi
-    nvm use --lts || { log_error "Failed to activate Node.js LTS"; return 1; }
-    nvm alias default 'lts/*' || log_warning "Failed to set default alias"
 
     log_info "Node.js $(node --version) installed"
 }

@@ -35,7 +35,15 @@ install_zoxide() {
         return 0
     fi
 
-    curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
+    local tmp_script
+    tmp_script=$(mktemp)
+    if ! curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh -o "$tmp_script"; then
+        log_error "Failed to download zoxide install script"
+        rm -f "$tmp_script"
+        return 1
+    fi
+    sh "$tmp_script"
+    rm -f "$tmp_script"
     log_info "zoxide installed"
 }
 
@@ -52,7 +60,15 @@ install_starship() {
         return 0
     fi
 
-    curl -sS https://starship.rs/install.sh | sh -s -- --bin-dir "$INSTALL_BIN" -y
+    local tmp_script
+    tmp_script=$(mktemp)
+    if ! curl -sSf https://starship.rs/install.sh -o "$tmp_script"; then
+        log_error "Failed to download starship install script"
+        rm -f "$tmp_script"
+        return 1
+    fi
+    sh "$tmp_script" -- --bin-dir "$INSTALL_BIN" -y
+    rm -f "$tmp_script"
     log_info "starship installed"
 }
 
@@ -102,53 +118,58 @@ install_btop() {
 
 setup_cli_tools() {
     log_step "Installing CLI tools..."
+    local failures=0
 
     # GitHub Release-based tools (install_github_release pattern)
     # Args: REPO BINARY PATTERN
 
     install_github_release "sharkdp/fd" "fd" \
-        "fd-v{VERSION}-x86_64-unknown-linux-musl.tar.gz"
+        "fd-v{VERSION}-x86_64-unknown-linux-musl.tar.gz" || ((failures++))
 
     install_github_release "BurntSushi/ripgrep" "rg" \
-        "ripgrep-{VERSION}-x86_64-unknown-linux-musl.tar.gz"
+        "ripgrep-{VERSION}-x86_64-unknown-linux-musl.tar.gz" || ((failures++))
 
     install_github_release "sharkdp/bat" "bat" \
-        "bat-v{VERSION}-x86_64-unknown-linux-musl.tar.gz"
+        "bat-v{VERSION}-x86_64-unknown-linux-musl.tar.gz" || ((failures++))
 
     install_github_release "eza-community/eza" "eza" \
-        "eza_x86_64-unknown-linux-musl.tar.gz"
+        "eza_x86_64-unknown-linux-musl.tar.gz" || ((failures++))
 
     install_github_release "dandavison/delta" "delta" \
-        "delta-{VERSION}-x86_64-unknown-linux-musl.tar.gz"
+        "delta-{VERSION}-x86_64-unknown-linux-musl.tar.gz" || ((failures++))
 
     install_github_release "jesseduffield/lazygit" "lazygit" \
-        "lazygit_{VERSION}_Linux_x86_64.tar.gz"
+        "lazygit_{VERSION}_Linux_x86_64.tar.gz" || ((failures++))
 
     install_github_release "muesli/duf" "duf" \
-        "duf_{VERSION}_linux_amd64.deb"
+        "duf_{VERSION}_linux_amd64.deb" || ((failures++))
 
     install_github_release "dundee/gdu" "gdu" \
-        "gdu_linux_amd64_static.tgz" "" "gdu_linux_amd64_static"
+        "gdu_linux_amd64_static.tgz" "" "gdu_linux_amd64_static" || ((failures++))
 
     install_github_release "chmln/sd" "sd" \
-        "sd-v{VERSION}-x86_64-unknown-linux-musl.tar.gz"
+        "sd-v{VERSION}-x86_64-unknown-linux-musl.tar.gz" || ((failures++))
 
     install_github_release "ducaale/xh" "xh" \
-        "xh-v{VERSION}-x86_64-unknown-linux-musl.tar.gz"
+        "xh-v{VERSION}-x86_64-unknown-linux-musl.tar.gz" || ((failures++))
 
     install_github_release "sharkdp/hyperfine" "hyperfine" \
-        "hyperfine-v{VERSION}-x86_64-unknown-linux-musl.tar.gz"
+        "hyperfine-v{VERSION}-x86_64-unknown-linux-musl.tar.gz" || ((failures++))
 
     install_github_release "jesseduffield/lazydocker" "lazydocker" \
-        "lazydocker_{VERSION}_Linux_x86_64.tar.gz"
+        "lazydocker_{VERSION}_Linux_x86_64.tar.gz" || ((failures++))
 
     # Special install methods
-    install_fzf
-    install_zoxide
-    install_starship
-    install_gh
-    install_btop
+    install_fzf      || ((failures++))
+    install_zoxide   || ((failures++))
+    install_starship || ((failures++))
+    install_gh       || ((failures++))
+    install_btop     || ((failures++))
 
+    if [[ "$failures" -gt 0 ]]; then
+        log_warning "CLI tools: $failures tool(s) failed to install"
+        return 1
+    fi
     log_info "CLI tools installation complete"
 }
 
