@@ -249,6 +249,35 @@ make doctor                           # Diagnostics
 
 ---
 
+## Claude Code Skills
+
+| Command | Description |
+|---------|-------------|
+| `/review <file>` | Code review (security, performance, readability) |
+| `/gen-test <file>` | Generate tests (auto-detect framework) |
+| `/gen-docs <file>` | Generate documentation (JSDoc/docstring/README) |
+| `/wt` | Git worktree operations |
+| `/wp` | WordPress Docker project management |
+
+### Config Files
+
+| File | Description |
+|------|-------------|
+| `~/CLAUDE.md` | Global instructions (tools, aliases, coding style) |
+| `~/.claude/settings.json` | Permissions, env vars, hooks |
+| `~/.claude/settings.local.json` | Machine-specific permissions |
+| `~/.claude/hooks/auto-format.sh` | Auto-format on Edit/Write |
+| `~/.claude/skills/*/SKILL.md` | Custom slash commands |
+
+### Auto-format Hook
+
+Edit/Write 後に自動実行:
+- `.ts`/`.tsx`/`.js`/`.jsx`/`.json` → `biome format`
+- `.py` → `ruff format`
+- Error log: `/tmp/claude-hook-format.log`
+
+---
+
 ## FZF
 
 | Shortcut | Description |

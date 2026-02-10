@@ -96,6 +96,12 @@ cd awsome-dev-in-wsl2
 - ネイティブ MySQL 無効化 (Docker で代替)
 - WSL2 `.wslconfig` 設定リマインダ
 
+### Phase 7: Claude Code Configuration
+
+- **settings.json** - 権限設定 (allow/deny)、環境変数、PostToolUse フック
+- **hooks** - Edit/Write 後の自動フォーマット (biome, ruff)
+- **skills** - カスタムスラッシュコマンド (`/review`, `/gen-test`, `/gen-docs`, `/wt`, `/wp`)
+
 ## Dotfiles Snippets
 
 Shell configuration snippets in `scripts/dotfiles/` that extend your environment:
