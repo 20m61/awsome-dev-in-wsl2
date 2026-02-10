@@ -28,7 +28,7 @@ _wt_session_name() {
   fi
   local repo_name
   repo_name="$(basename "$root")"
-  # Sanitize branch: replace / with - (tmux session names can't have .)
+  # Sanitize branch: replace / with - (tmux session names can't have /)
   local safe_branch="${branch//\//-}"
   echo "${repo_name}/${safe_branch}"
 }
@@ -70,7 +70,13 @@ _wt_add() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --base) base="$2"; shift 2 ;;
+      --base)
+        if [[ $# -lt 2 ]]; then
+          echo "wt: --base requires an argument" >&2
+          return 1
+        fi
+        base="$2"; shift 2
+        ;;
       *)      branch="$1"; shift ;;
     esac
   done
@@ -140,7 +146,7 @@ _wt_ls() {
   echo "Worktrees for ${repo_name}:"
   echo ""
 
-  git worktree list | while IFS= read -r line; do
+  while IFS= read -r line; do
     local wt_path wt_branch bracket_part
     wt_path="${line%% *}"
     bracket_part="${line##*\[}"
@@ -153,7 +159,7 @@ _wt_ls() {
     else
       printf "  \033[90m○\033[0m %-50s %s \033[90m(tmux: none)\033[0m\n" "$wt_path" "[$wt_branch]"
     fi
-  done
+  done < <(git worktree list)
 }
 
 # wt switch - fzf picker for worktree/session
@@ -312,7 +318,7 @@ _wt_review() {
   echo "wt: PR #${pr_number} -> branch '${branch}'"
 
   # Fetch the branch
-  if ! git fetch origin "$branch" 2>&1; then
+  if ! git fetch origin "$branch"; then
     echo "wt: failed to fetch branch '${branch}' from origin" >&2
     return 1
   fi
@@ -325,7 +331,7 @@ _wt_review() {
   if [[ -d "$wt_dir" ]]; then
     echo "wt: worktree already exists, switching..."
   else
-    if ! git worktree add "$wt_dir" "origin/${branch}" 2>/dev/null && \
+    if ! git worktree add -b "$branch" "$wt_dir" "origin/${branch}" 2>/dev/null && \
        ! git worktree add "$wt_dir" "$branch" 2>/dev/null; then
       echo "wt: failed to create worktree for branch '${branch}'" >&2
       return 1
@@ -461,7 +467,7 @@ _wt_completions() {
   prev="${COMP_WORDS[COMP_CWORD-1]}"
 
   if [[ ${COMP_CWORD} -eq 1 ]]; then
-    COMPREPLY=($(compgen -W "add ls switch rm review cd help" -- "$cur"))
+    mapfile -t COMPREPLY < <(compgen -W "add ls switch rm review cd help" -- "$cur")
     return
   fi
 
@@ -473,20 +479,20 @@ _wt_completions() {
       if [[ "$prev" == "--base" ]]; then
         local refs
         refs=$(git for-each-ref --format='%(refname:short)' refs/heads/ refs/tags/ 2>/dev/null)
-        COMPREPLY=($(compgen -W "$refs" -- "$cur"))
+        mapfile -t COMPREPLY < <(compgen -W "$refs" -- "$cur")
       elif [[ "$cur" == --* ]]; then
-        COMPREPLY=($(compgen -W "--base" -- "$cur"))
+        mapfile -t COMPREPLY < <(compgen -W "--base" -- "$cur")
       else
         local branches
         branches=$(git for-each-ref --format='%(refname:short)' refs/heads/ 2>/dev/null)
-        COMPREPLY=($(compgen -W "$branches" -- "$cur"))
+        mapfile -t COMPREPLY < <(compgen -W "$branches" -- "$cur")
       fi
       ;;
     rm|cd)
       # Complete existing worktree branches
       local wt_branches
       wt_branches=$(git worktree list 2>/dev/null | sed -n 's/.*\[\(.*\)\].*/\1/p')
-      COMPREPLY=($(compgen -W "$wt_branches" -- "$cur"))
+      mapfile -t COMPREPLY < <(compgen -W "$wt_branches" -- "$cur")
       ;;
     review)
       # No completion for PR numbers

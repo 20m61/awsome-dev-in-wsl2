@@ -139,7 +139,15 @@ install_uv() {
         return 0
     fi
 
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+    local tmp_script
+    tmp_script=$(mktemp)
+    if ! curl -LsSf https://astral.sh/uv/install.sh -o "$tmp_script"; then
+        log_error "Failed to download uv install script"
+        rm -f "$tmp_script"
+        return 1
+    fi
+    sh "$tmp_script"
+    rm -f "$tmp_script"
     log_info "uv installed"
 }
 
@@ -155,7 +163,15 @@ install_atuin() {
         return 0
     fi
 
-    curl -sSfL https://setup.atuin.sh | sh
+    local tmp_script
+    tmp_script=$(mktemp)
+    if ! curl -sSfL https://setup.atuin.sh -o "$tmp_script"; then
+        log_error "Failed to download atuin install script"
+        rm -f "$tmp_script"
+        return 1
+    fi
+    sh "$tmp_script"
+    rm -f "$tmp_script"
     log_info "atuin installed"
 }
 
