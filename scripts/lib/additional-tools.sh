@@ -16,8 +16,13 @@ install_direnv() {
         return 0
     fi
 
-    local version
-    version=$(curl -sL https://api.github.com/repos/direnv/direnv/releases/latest | grep -oP '"tag_name": "v\K[^"]+')
+    local tag
+    tag=$(_github_latest_tag "direnv/direnv")
+    if [[ -z "$tag" ]]; then
+        log_error "Failed to get latest direnv version"
+        return 1
+    fi
+    local version="${tag#v}"
     curl -sL "https://github.com/direnv/direnv/releases/download/v${version}/direnv.linux-amd64" -o "$INSTALL_BIN/direnv"
     chmod +x "$INSTALL_BIN/direnv"
     log_info "direnv installed"
@@ -35,8 +40,13 @@ install_jq() {
         return 0
     fi
 
-    local version
-    version=$(curl -sL https://api.github.com/repos/jqlang/jq/releases/latest | grep -oP '"tag_name": "jq-\K[^"]+')
+    local tag
+    tag=$(_github_latest_tag "jqlang/jq")
+    if [[ -z "$tag" ]]; then
+        log_error "Failed to get latest jq version"
+        return 1
+    fi
+    local version="${tag#jq-}"
     curl -sL "https://github.com/jqlang/jq/releases/download/jq-${version}/jq-linux-amd64" -o "$INSTALL_BIN/jq"
     chmod +x "$INSTALL_BIN/jq"
     log_info "jq installed"
@@ -54,8 +64,13 @@ install_yq() {
         return 0
     fi
 
-    local version
-    version=$(curl -sL https://api.github.com/repos/mikefarah/yq/releases/latest | grep -oP '"tag_name": "v\K[^"]+')
+    local tag
+    tag=$(_github_latest_tag "mikefarah/yq")
+    if [[ -z "$tag" ]]; then
+        log_error "Failed to get latest yq version"
+        return 1
+    fi
+    local version="${tag#v}"
     curl -sL "https://github.com/mikefarah/yq/releases/download/v${version}/yq_linux_amd64" -o "$INSTALL_BIN/yq"
     chmod +x "$INSTALL_BIN/yq"
     log_info "yq installed"
@@ -78,10 +93,19 @@ install_tldr() {
         return 0
     fi
 
-    curl -sL "https://github.com/dbrgn/tealdeer/releases/download/v1.7.2/tealdeer-linux-x86_64-musl" -o "$INSTALL_BIN/tldr"
+    local tag
+    tag=$(_github_latest_tag "dbrgn/tealdeer")
+    if [[ -z "$tag" ]]; then
+        log_error "Failed to get latest tealdeer version"
+        return 1
+    fi
+    local version="${tag#v}"
+
+    mkdir -p "$INSTALL_BIN"
+    curl -sL "https://github.com/dbrgn/tealdeer/releases/download/v${version}/tealdeer-linux-x86_64-musl" -o "$INSTALL_BIN/tldr"
     chmod +x "$INSTALL_BIN/tldr"
     "$INSTALL_BIN/tldr" --update 2>/dev/null || true
-    log_info "tldr installed"
+    log_info "tldr installed (v${version})"
 }
 
 install_uv() {

@@ -153,19 +153,36 @@ _wt_switch() {
   repo_name="$(basename "$root")"
 
   local selected
-  selected=$(git worktree list | awk 'NR>0 {print $0}' | \
-    fzf --header="Switch worktree (${repo_name})" \
-        --preview "
-          dir=\$(echo {} | awk '{print \$1}')
-          branch=\$(echo {} | grep -oP '\[.*?\]' | tr -d '[]')
-          echo \"Branch: \$branch\"
-          echo \"Path: \$dir\"
-          echo ''
-          echo '--- Recent commits ---'
-          git -C \"\$dir\" log --oneline --graph --decorate -15 --color=always 2>/dev/null
-        " \
-        --preview-window=right:60%
-  )
+  if command -v fzf &>/dev/null; then
+    selected=$(git worktree list | awk 'NR>0 {print $0}' | \
+      fzf --header="Switch worktree (${repo_name})" \
+          --preview "
+            dir=\$(echo {} | awk '{print \$1}')
+            branch=\$(echo {} | grep -oP '\[.*?\]' | tr -d '[]')
+            echo \"Branch: \$branch\"
+            echo \"Path: \$dir\"
+            echo ''
+            echo '--- Recent commits ---'
+            git -C \"\$dir\" log --oneline --graph --decorate -15 --color=always 2>/dev/null
+          " \
+          --preview-window=right:60%
+    )
+  else
+    echo "Select worktree (${repo_name}):"
+    local entries=()
+    while IFS= read -r line; do
+      entries+=("$line")
+    done < <(git worktree list)
+    local i
+    for i in "${!entries[@]}"; do
+      echo "  $((i + 1))) ${entries[$i]}"
+    done
+    local choice
+    read -rp "Enter number: " choice
+    if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#entries[@]} )); then
+      selected="${entries[$((choice - 1))]}"
+    fi
+  fi
 
   if [[ -z "$selected" ]]; then
     return 0
@@ -205,6 +222,17 @@ _wt_rm() {
   local wt_dir="${root}/.worktrees/${safe_branch}"
   local session_name
   session_name="$(_wt_session_name "$branch")"
+
+  # Check for uncommitted changes before removal
+  if [[ -d "$wt_dir" ]] && git -C "$wt_dir" status --porcelain 2>/dev/null | grep -q .; then
+    echo "wt: WARNING - worktree has uncommitted changes:"
+    git -C "$wt_dir" status --short
+    read -rp "Remove anyway? [y/N] " answer
+    if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+      echo "wt: aborted"
+      return 1
+    fi
+  fi
 
   # Kill tmux session if it exists
   if tmux has-session -t "=$session_name" 2>/dev/null; then
@@ -298,12 +326,29 @@ _wt_cd() {
       return 1
     fi
   else
-    # fzf picker
+    # Interactive picker
     local selected
-    selected=$(git worktree list | \
-      fzf --header="cd to worktree" \
-          --preview "eza --color=always --icons --group-directories-first \$(echo {} | awk '{print \$1}') 2>/dev/null || ls -la \$(echo {} | awk '{print \$1}')"
-    )
+    if command -v fzf &>/dev/null; then
+      selected=$(git worktree list | \
+        fzf --header="cd to worktree" \
+            --preview "eza --color=always --icons --group-directories-first \$(echo {} | awk '{print \$1}') 2>/dev/null || ls -la \$(echo {} | awk '{print \$1}')"
+      )
+    else
+      echo "Select worktree:"
+      local entries=()
+      while IFS= read -r line; do
+        entries+=("$line")
+      done < <(git worktree list)
+      local i
+      for i in "${!entries[@]}"; do
+        echo "  $((i + 1))) ${entries[$i]}"
+      done
+      local choice
+      read -rp "Enter number: " choice
+      if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#entries[@]} )); then
+        selected="${entries[$((choice - 1))]}"
+      fi
+    fi
     if [[ -n "$selected" ]]; then
       local wt_path
       wt_path="$(echo "$selected" | awk '{print $1}')"

@@ -16,7 +16,13 @@ install_nvm() {
         return 0
     fi
 
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+    local nvm_version
+    nvm_version=$(_github_latest_tag "nvm-sh/nvm")
+    if [[ -z "$nvm_version" ]]; then
+        log_warning "Failed to detect nvm version, falling back to v0.40.3"
+        nvm_version="v0.40.3"
+    fi
+    curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/${nvm_version}/install.sh" | bash
 
     export NVM_DIR="$HOME/.nvm"
     # shellcheck disable=SC1091

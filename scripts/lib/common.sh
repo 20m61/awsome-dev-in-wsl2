@@ -118,7 +118,7 @@ install_github_release() {
     fi
 
     local version
-    version=$(curl -sL "https://api.github.com/repos/$repo/releases/latest" | grep -oP '"tag_name": "\K[^"]+')
+    version=$(_github_latest_tag "$repo")
     if [[ -z "$version" ]]; then
         log_error "Failed to get latest version for $repo"
         return 1
@@ -225,4 +225,17 @@ check_system_requirements() {
     fi
 
     log_info "System requirements OK"
+}
+
+# Get latest release tag from GitHub (uses gh CLI if available for higher rate limits)
+_github_latest_tag() {
+    local repo="$1"
+    local tag=""
+    if command_exists gh; then
+        tag=$(gh api "repos/$repo/releases/latest" --jq '.tag_name' 2>/dev/null) || true
+    fi
+    if [[ -z "$tag" ]]; then
+        tag=$(curl -sL "https://api.github.com/repos/$repo/releases/latest" | grep -oP '"tag_name": "\K[^"]+')
+    fi
+    echo "$tag"
 }
