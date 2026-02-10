@@ -142,6 +142,94 @@ Custom configs can extend or override:
 ./scripts/setup.sh --config /path/to/custom.conf
 ```
 
+## Error Handling & Security Patterns
+
+### curl Downloads
+
+All `curl` downloads must use the `-f` (fail) flag to detect HTTP errors (404, 500, etc.):
+
+```bash
+# Good: -f detects HTTP errors
+curl -sfL "$url" -o "$dest"
+
+# Bad: 404 HTML silently saved as binary
+curl -sL "$url" -o "$dest"
+```
+
+### Remote Script Execution
+
+Never pipe `curl` directly to `sh/bash`. Download to a temp file first:
+
+```bash
+# Good: download, then execute
+local tmp_script
+tmp_script=$(mktemp)
+if ! curl -fsSL "$url" -o "$tmp_script"; then
+    log_error "Download failed"
+    rm -f "$tmp_script"
+    return 1
+fi
+bash "$tmp_script"
+rm -f "$tmp_script"
+
+# Bad: no error detection, no cleanup
+curl -o- "$url" | bash
+```
+
+### Failure Propagation
+
+Orchestrator functions must check child return codes:
+
+```bash
+# Good: propagate failures
+setup_tools() {
+    install_foo || return 1
+    install_bar || return 1
+}
+
+# Good: count and report failures
+setup_tools() {
+    local failures=0
+    install_foo || ((failures++))
+    install_bar || ((failures++))
+    [[ "$failures" -gt 0 ]] && return 1
+}
+
+# Bad: failures silently ignored
+setup_tools() {
+    install_foo
+    install_bar
+}
+```
+
+### Input Validation
+
+Validate user-supplied inputs before passing to git/shell commands:
+
+```bash
+# Repo format: owner/name
+[[ "$repo" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]
+
+# Branch name
+git check-ref-format --allow-onelevel "refs/heads/${branch}"
+```
+
+### POSIX Compatibility (Dotfiles)
+
+Sourced dotfiles avoid GNU-only extensions for portability:
+
+```bash
+# Good: bash parameter expansion
+bracket_part="${line##*\[}"
+wt_branch="${bracket_part%%\]*}"
+
+# Good: POSIX sed
+sed -n 's/.*\[\(.*\)\].*/\1/p'
+
+# Bad: GNU grep -oP (Perl regex, not available on macOS/minimal Linux)
+grep -oP '\[.*?\]'
+```
+
 ## Install Strategies
 
 | Strategy | Tools | Method |

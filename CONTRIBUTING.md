@@ -81,9 +81,19 @@ chore: update tool versions
 
 ## Code Style
 
-- `set -euo pipefail` in all scripts
+- `set -euo pipefail` in all scripts (except sourced dotfiles — add a comment explaining why)
 - Use `[[ ]]` over `[ ]`
 - Quote all variables
 - Use `local` for function-scoped variables
 - Check `command_exists` before assuming tools are available
 - Support `DRY_RUN` mode in all install functions
+
+## Error Handling
+
+- All `curl` downloads must use `-f` (--fail) to detect HTTP errors
+- Never pipe `curl` directly to `sh` — download to temp file first
+- Orchestrator functions (`setup_*`) must propagate child failures with `|| return 1`
+- Validate user inputs: branch names (`git check-ref-format`), repo format (regex)
+- Avoid `grep -oP` — use bash parameter expansion or `sed` for POSIX compatibility
+
+See [docs/architecture.md](docs/architecture.md) for detailed patterns and examples.
