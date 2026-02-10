@@ -17,13 +17,21 @@ install_neovim() {
     fi
 
     local version
-    version=$(curl -sL https://api.github.com/repos/neovim/neovim/releases/latest | grep -oP '"tag_name": "\K[^"]+')
+    version=$(_github_latest_tag "neovim/neovim")
+    if [[ -z "$version" ]]; then
+        log_error "Failed to get latest Neovim version"
+        return 1
+    fi
 
     local tmp_dir
     tmp_dir=$(mktemp -d)
-    trap "rm -rf '$tmp_dir'" RETURN
+    # shellcheck disable=SC2064
+    trap "rm -rf -- '${tmp_dir}'" RETURN
 
-    curl -sL "https://github.com/neovim/neovim/releases/download/${version}/nvim-linux-x86_64.tar.gz" -o "$tmp_dir/nvim.tar.gz"
+    if ! curl -sfL "https://github.com/neovim/neovim/releases/download/${version}/nvim-linux-x86_64.tar.gz" -o "$tmp_dir/nvim.tar.gz"; then
+        log_error "Failed to download Neovim ${version}"
+        return 1
+    fi
     tar xzf "$tmp_dir/nvim.tar.gz" -C "$tmp_dir"
     cp -r "$tmp_dir"/nvim-linux-x86_64/* "$HOME/.local/"
 

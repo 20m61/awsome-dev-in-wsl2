@@ -544,15 +544,27 @@ Claude Code が環境を最大限活用できるようにする設定。
 
 `~/CLAUDE.md` に以下の情報を含める:
 
-- 利用可能な CLI ツール一覧（パス付き）
-- シェル関数・エイリアス一覧
+- コンパクション指示（Compact Instructions: 何を保持/破棄するか）
+- 利用可能な CLI ツール一覧
+- 重要なシェルエイリアス（`gl` ≠ `git pull` 等の注意点）
 - プロジェクト構造（ghq 管理）
 - WSL2 固有の注意点
 - コーディングスタイル・ブランチ戦略
 
-### 7.2 settings.json (権限・環境変数・hooks)
+> **最適化のポイント**: Claude が自力で発見できる情報（ツールのフルパス、網羅的なエイリアス一覧）は省略し、トークン消費を削減。約75行に圧縮。
+
+### 7.2 settings.json (権限・環境変数・hooks・トークン効率化)
 
 `~/.claude/settings.json`:
+
+**トークン効率化の環境変数:**
+
+| 変数 | 値 | 効果 |
+|------|-----|------|
+| `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | `70` | 自動コンパクションを70%で発動（デフォルト95%） |
+| `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | `1` | Agent Teams（マルチエージェント協働）を有効化 |
+
+> **Note**: Effort level は `claude --effort medium` でセッション単位で指定（グローバル設定は品質リスクのため非推奨）。
 
 ```json
 {
@@ -575,7 +587,9 @@ Claude Code が環境を最大限活用できるようにする設定。
   },
   "env": {
     "EDITOR": "nvim",
-    "LANG": "ja_JP.UTF-8"
+    "LANG": "ja_JP.UTF-8",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "70",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "hooks": {
     "PostToolUse": [
@@ -654,16 +668,19 @@ chmod +x ~/.claude/hooks/auto-format.sh
 
 ```
 ~/.claude/
-├── settings.json          # グローバル権限・env・hooks
+├── settings.json          # グローバル権限・env・hooks・トークン効率化
 ├── settings.local.json    # マシン固有の権限
 ├── hooks/
 │   └── auto-format.sh     # PostToolUse 自動フォーマット
-└── skills/
-    ├── review/SKILL.md
-    ├── gen-test/SKILL.md
-    ├── gen-docs/SKILL.md
-    ├── wt/SKILL.md
-    └── wp/SKILL.md
+├── skills/
+│   ├── review/SKILL.md
+│   ├── gen-test/SKILL.md
+│   ├── gen-docs/SKILL.md
+│   ├── wt/SKILL.md
+│   └── wp/SKILL.md
+└── projects/
+    └── <project>/memory/
+        └── MEMORY.md      # セッション横断メモリ（プロジェクト別）
 ```
 
 ---

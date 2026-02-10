@@ -520,6 +520,45 @@ hyperfine --export-markdown bench.md 'cmd1' 'cmd2'
 | `/wt` | Git worktree operations |
 | `/wp` | WordPress Docker project management |
 
+### Token Efficiency Settings
+
+`~/.claude/settings.json` の `env` セクション:
+
+| Variable | Value | Effect |
+|----------|-------|--------|
+| `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | `70` | Auto-compaction at 70% context (default: 95%) |
+| `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | `1` | Enable multi-agent collaboration |
+
+Session tips:
+- `claude --effort medium` — Per-session effort level for routine tasks (reduces thinking tokens)
+- `/clear` — Reset context between unrelated tasks
+- `/compact` — Manual compaction when context feels bloated
+
+### Agent Teams (Experimental)
+
+Multiple Claude Code instances working in parallel:
+
+```
+# Spawn teammates with natural language
+Spawn 3 teammates to review this PR:
+- Security reviewer (use Sonnet)
+- Performance reviewer (use Sonnet)
+- Test coverage reviewer (use Sonnet)
+```
+
+| Feature | Subagents | Agent Teams |
+|---------|-----------|-------------|
+| Communication | Report to lead only | Direct teammate-to-teammate |
+| Use case | Focused single tasks | Complex collaborative work |
+| Token cost | Low | High (N teammates ~ N× tokens) |
+
+Controls:
+- `Shift+Up/Down` — Switch between teammates (in-process mode)
+- Split-panes mode available with tmux
+- Shutdown: `Ask <teammate> to shut down`
+
+Best for: parallel code review, hypothesis debugging, independent module development.
+
 ### Config Directory Structure
 
 ```
@@ -528,12 +567,14 @@ hyperfine --export-markdown bench.md 'cmd1' 'cmd2'
 ├── settings.local.json    # Machine-specific permissions
 ├── hooks/
 │   └── auto-format.sh     # PostToolUse auto-format
-└── skills/
-    ├── review/SKILL.md
-    ├── gen-test/SKILL.md
-    ├── gen-docs/SKILL.md
-    ├── wt/SKILL.md
-    └── wp/SKILL.md
+├── skills/
+│   ├── review/SKILL.md
+│   ├── gen-test/SKILL.md
+│   ├── gen-docs/SKILL.md
+│   ├── wt/SKILL.md
+│   └── wp/SKILL.md
+└── projects/
+    └── <project>/memory/MEMORY.md  # Cross-session memory
 ```
 
 ### Auto-format Hook

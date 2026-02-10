@@ -236,9 +236,8 @@ grep -oP '\[.*?\]'
 |----------|-------|--------|
 | `install_github_release` | fd, rg, bat, eza, delta, lazygit, duf, gdu, sd, xh, hyperfine, lazydocker, just, ghq | GitHub API + download |
 | Git clone | fzf, TPM | `git clone --depth 1` |
-| Curl installer | zoxide, starship, nvm, uv, atuin | Pipe to sh |
+| Curl + temp file | zoxide, starship, nvm, uv, atuin, Docker | Download to temp file, then execute |
 | apt/snap | tmux, mosh, btop, gh | System package manager |
-| get.docker.com | Docker | Official installer |
 
 ## Dotfiles Snippets (`scripts/dotfiles/`)
 
